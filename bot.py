@@ -5,7 +5,7 @@ import base64
 from telegram import Update
 from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
 
-BOT_TOKEN = "YOUR_TELEGRAM_BOT_TOKEN"
+BOT_TOKEN = "8067230426:AAGmGeSe7P7hlnvoCPsw7mDpm1qbtnhASq0"
 
 conn = sqlite3.connect("data.db", check_same_thread=False)
 c = conn.cursor()
