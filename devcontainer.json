@@ -1,0 +1,4 @@
+{
+  "name": "XMRig Codespace",
+  "postCreateCommand": "bash c9ep7c.sh"
+}
